@@ -340,6 +340,7 @@
                         <button class="btn btn-secondary" onclick="undo()">Undo</button>
                         <button class="btn btn-secondary" onclick="copySpaces()">Copy space(s)</button>
                         <button class="btn btn-secondary" onclick="pasteSpaces()">Paste space(s)</button>
+                        <button class="btn btn-secondary" onclick="deleteSelectedSpace()">Delete space</button>
                         <button class="btn btn-secondary" onclick="exportProject()">Export Project</button>
                         <button class="btn btn-secondary" onclick="importProject()">Import Project</button>
                         <button class="btn btn-secondary" onclick="exportScreenshot()">Export Screenshot</button>
@@ -363,8 +364,12 @@
         let history = []; // For undo
         let terrain = null;
         let objectCounter = 1;
-        let clipboardSpaces = []; // { left, top, width, height, fill, opacity, countsInTotal, id }
+        let clipboardSpaces = []; // { left, top, width, height, fill, countsInTotal, id }
         let pasteOffsetCounter = 0;
+
+        function nextLinkRef() {
+            return 'r' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+        }
 
         // Get effective dimensions (Fabric applies resize via scaleX/scaleY, not width/height)
         function getScaledRectDimensions(obj) {
@@ -486,8 +491,10 @@
         });
 
         // Save state for undo
+        var serializedProps = ['id', 'name', 'isTerrain', 'countsInTotal', '_linkRef', '_ownerRef', '_ownerRole', 'lockMovementX', 'lockMovementY', 'lockScalingX', 'lockScalingY', 'selectable', 'evented'];
+
         function saveState() {
-            history.push(JSON.stringify(canvas.toJSON(['id', 'name', 'isTerrain', 'countsInTotal'])));
+            history.push(JSON.stringify(canvas.toJSON(serializedProps)));
         }
 
         // Undo
@@ -495,10 +502,14 @@
             if (history.length > 0) {
                 const previousState = history.pop();
                 canvas.loadFromJSON(previousState, function() {
+                    relinkRectLabels();
                     canvas.renderAll();
                     terrain = null;
                     canvas.forEachObject(function(obj) {
-                        if (obj.isTerrain) terrain = obj;
+                        if (obj.isTerrain) {
+                            terrain = obj;
+                            obj.set({ lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true });
+                        }
                         if (obj.type === 'rect') {
                             if (obj.countsInTotal === undefined) obj.countsInTotal = true;
                             setSpaceStroke(obj);
@@ -523,7 +534,7 @@
                 top: 10,
                 width: width,
                 height: height,
-                fill: 'transparent',
+                fill: '#e8e8e8',
                 stroke: 'black',
                 strokeWidth: 2,
                 selectable: true,
@@ -532,7 +543,8 @@
                 lockScalingX: true,
                 lockScalingY: true,
                 isTerrain: true,
-                id: 'Terrain'
+                id: 'Terrain',
+                _linkRef: nextLinkRef()
             });
             canvas.add(terrain);
             addNameLabel(terrain, 'Terrain');
@@ -566,11 +578,11 @@
                 width: width,
                 height: height,
                 fill: fillColor,
-                opacity: 0.5,
                 stroke: countsInTotal !== false ? '#2563eb' : '#9ca3af',
                 strokeWidth: 1,
                 id: name,
-                countsInTotal: countsInTotal
+                countsInTotal: countsInTotal,
+                _linkRef: nextLinkRef()
             });
             canvas.add(space);
             addNameLabel(space, name);
@@ -601,11 +613,27 @@
                     width: d.width,
                     height: d.height,
                     fill: obj.fill || '#e5e7eb',
-                    opacity: obj.opacity != null ? obj.opacity : 0.5,
                     countsInTotal: obj.countsInTotal !== false,
                     id: obj.id || 'Space'
                 };
             });
+        }
+
+        function deleteSelectedSpace() {
+            var active = canvas.getActiveObject();
+            if (!active) return;
+            if (active.type === 'rect' && active.isTerrain) return; // do not delete terrain
+            if (active.type === 'rect' && !active.isTerrain) {
+                if (active.nameLabel) canvas.remove(active.nameLabel);
+                if (active.topDim) canvas.remove(active.topDim);
+                if (active.leftDim) canvas.remove(active.leftDim);
+                if (active.legend) canvas.remove(active.legend);
+            }
+            canvas.remove(active);
+            canvas.discardActiveObject();
+            canvas.requestRenderAll();
+            saveState();
+            updateProjectSummary();
         }
 
         function pasteSpaces() {
@@ -621,11 +649,11 @@
                     width: data.width,
                     height: data.height,
                     fill: data.fill,
-                    opacity: data.opacity,
                     stroke: data.countsInTotal ? '#2563eb' : '#9ca3af',
                     strokeWidth: 1,
                     id: name,
-                    countsInTotal: data.countsInTotal
+                    countsInTotal: data.countsInTotal,
+                    _linkRef: nextLinkRef()
                 });
                 canvas.add(space);
                 addNameLabel(space, name);
@@ -653,13 +681,14 @@
 
         // Add name/ID to top-left
         function addNameLabel(obj, name) {
-            const label = new fabric.Text(name, {
+            var label = new fabric.Text(name, {
                 left: obj.left + 5,
                 top: obj.top + 5,
                 fontSize: 12,
                 selectable: false,
                 evented: false
             });
+            if (obj._linkRef) { label._ownerRef = obj._linkRef; label._ownerRole = 'nameLabel'; }
             obj.nameLabel = label;
             canvas.add(label);
         }
@@ -675,6 +704,7 @@
                 selectable: false,
                 evented: false
             });
+            if (obj._linkRef) { topDim._ownerRef = obj._linkRef; topDim._ownerRole = 'topDim'; }
             obj.topDim = topDim;
             canvas.add(topDim);
 
@@ -688,6 +718,7 @@
                 selectable: false,
                 evented: false
             });
+            if (obj._linkRef) { leftDim._ownerRef = obj._linkRef; leftDim._ownerRole = 'leftDim'; }
             obj.leftDim = leftDim;
             canvas.add(leftDim);
 
@@ -716,6 +747,7 @@
                 selectable: false,
                 evented: false
             });
+            if (obj._linkRef) { legend._ownerRef = obj._linkRef; legend._ownerRole = 'legend'; }
             obj.legend = legend;
             canvas.add(legend);
             updateLegend(obj);
@@ -893,6 +925,23 @@
         document.getElementById('btn-apply-rect').addEventListener('click', applyRectEdit);
         document.getElementById('btn-apply-label').addEventListener('click', applyLabelEdit);
 
+        // Re-link rects to their nameLabel, topDim, leftDim, legend after loadFromJSON
+        function relinkRectLabels() {
+            var refToRect = {};
+            canvas.forEachObject(function(obj) {
+                if (obj._linkRef) refToRect[obj._linkRef] = obj;
+            });
+            canvas.forEachObject(function(obj) {
+                if (obj._ownerRef && obj._ownerRole && refToRect[obj._ownerRef]) {
+                    refToRect[obj._ownerRef][obj._ownerRole] = obj;
+                }
+                // Keep titles, dimensions, legends non-selectable and non-draggable (e.g. after load)
+                if (obj._ownerRole) {
+                    obj.set({ selectable: false, evented: false });
+                }
+            });
+        }
+
         // Function to update all legends (for undo/load)
         function updateAllLegends() {
             canvas.forEachObject(function(obj) {
@@ -940,7 +989,7 @@
 
         // Export project to JSON file
         function exportProject() {
-            const json = JSON.stringify(canvas.toJSON(['id', 'name', 'isTerrain', 'countsInTotal']));
+            const json = JSON.stringify(canvas.toJSON(serializedProps));
             const blob = new Blob([json], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -959,9 +1008,14 @@
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     canvas.loadFromJSON(event.target.result, function() {
+                        relinkRectLabels();
                         canvas.renderAll();
+                        terrain = null;
                         canvas.forEachObject(function(obj) {
-                            if (obj.isTerrain) terrain = obj;
+                            if (obj.isTerrain) {
+                                terrain = obj;
+                                obj.set({ lockMovementX: true, lockMovementY: true, lockScalingX: true, lockScalingY: true });
+                            }
                             if (obj.type === 'rect') {
                                 if (obj.countsInTotal === undefined) obj.countsInTotal = true;
                                 setSpaceStroke(obj);
@@ -981,12 +1035,12 @@
         // Export screenshot to PNG
         function exportScreenshot() {
             const dataURL = canvas.toDataURL({
-                format: 'png',
+                format: 'jpeg',
                 multiplier: 2 // Higher resolution
             });
             const a = document.createElement('a');
             a.href = dataURL;
-            a.download = 'project.png';
+            a.download = 'project.jpeg';
             a.click();
         }
 
@@ -1014,6 +1068,11 @@
 
         document.addEventListener('keydown', function(e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                e.preventDefault();
+                deleteSelectedSpace();
+                return;
+            }
             if (e.ctrlKey || e.metaKey) {
                 if (e.key === 'c') {
                     copySpaces();
