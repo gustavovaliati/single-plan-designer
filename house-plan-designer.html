@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple House Plan Designer</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: #1a1a1a;
+        }
+        h1 {
+            margin: 0;
+            padding: 16px 24px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fff;
+            flex-shrink: 0;
+        }
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        #left-panel {
+            width: 380px;
+            max-width: 380px;
+            min-width: 0;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            transition: width 0.25s ease, min-width 0.25s ease;
+            overflow: hidden;
+            border-right: 1px solid #e5e7eb;
+        }
+        #left-panel.collapsed {
+            width: 0;
+            min-width: 0;
+            border-right: none;
+        }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: #fff;
+            border-bottom: 1px solid #e5e7eb;
+            flex-shrink: 0;
+        }
+        .panel-header h2 {
+            margin: 0;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #6b7280;
+        }
+        #toggle-panel {
+            padding: 6px 12px;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #fff;
+            font-size: 0.8125rem;
+            color: #374151;
+            font-weight: 500;
+        }
+        #toggle-panel:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+        #tools {
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .panel-section {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+        .panel-section:last-child { margin-bottom: 0; }
+        .panel-section h3 {
+            margin: 0 0 12px 0;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #374151;
+        }
+        .panel-section .field {
+            margin-bottom: 10px;
+        }
+        .panel-section .field:last-of-type { margin-bottom: 12px; }
+        .panel-section label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .panel-section label:has(input[type="checkbox"]) {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .panel-section label:has(input[type="checkbox"]) input { margin: 0; }
+        .panel-section input[type="text"],
+        .panel-section input[type="number"] {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: #1a1a1a;
+        }
+        .panel-section input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+        .panel-section .field-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .panel-section .field-row .field { flex: 1; margin-bottom: 0; }
+        .btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: #fff;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .panel-section .btn { margin-right: 8px; margin-top: 4px; }
+        #project-summary {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+        #project-summary h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #374151;
+        }
+        #project-summary p {
+            margin: 0 0 8px 0;
+            font-size: 0.875rem;
+            color: #1a1a1a;
+        }
+        #project-summary p strong { color: #374151; }
+        #summary-total { font-weight: 600; color: #2563eb; }
+        #project-summary ul {
+            margin: 0 0 4px 0;
+            padding-left: 18px;
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 0.8125rem;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+        #project-summary #summary-list-non-built { max-height: 120px; }
+        #edit-selection.panel-section { margin-bottom: 12px; }
+        .actions-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .actions-row .btn { margin: 0; }
+        #canvas-wrapper {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            background: #e8e8e8;
+        }
+        #canvas-container {
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            position: relative;
+            border: none;
+            background: #fff;
+        }
+        #canvas-container canvas {
+            display: block;
+        }
+        .collapse-tab {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 80px;
+            background: #ddd;
+            border: 1px solid #ccc;
+            border-left: none;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 10;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+        }
+        .collapse-tab:hover { background: #ccc; }
+        #left-panel.collapsed ~ .collapse-tab { display: flex; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+</head>
+<body>
+    <h1>Simple House Plan Designer</h1>
+    <div class="main-layout">
+        <div id="left-panel">
+            <div class="panel-header">
+                <h2>Tools</h2>
+                <button id="toggle-panel" type="button" title="Collapse panel">&#9664; Collapse</button>
+            </div>
+            <div id="tools">
+                <div class="panel-section">
+                    <h3>Create Terrain</h3>
+                    <div class="field-row">
+                        <div class="field">
+                            <label>Width (m)</label>
+                            <input type="number" id="terrain-width" value="15">
+                        </div>
+                        <div class="field">
+                            <label>Height (m)</label>
+                            <input type="number" id="terrain-height" value="42">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="createTerrain()">Create Terrain</button>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Add Space</h3>
+                    <div class="field">
+                        <label>Name</label>
+                        <input type="text" id="space-name" placeholder="e.g., Living Space">
+                    </div>
+                    <div class="field-row">
+                        <div class="field">
+                            <label>Width (m)</label>
+                            <input type="number" id="space-width" value="5">
+                        </div>
+                        <div class="field">
+                            <label>Height (m)</label>
+                            <input type="number" id="space-height" value="4">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Color</label>
+                        <input type="color" id="space-color" value="#e5e7eb" style="width: 100%; height: 36px; padding: 2px; cursor: pointer;">
+                    </div>
+                    <label><input type="checkbox" id="space-counts-in-total" checked> Include in built area</label>
+                    <button class="btn btn-primary" onclick="addSpace()">Add Space</button>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Add Label</h3>
+                    <div class="field">
+                        <label>Text</label>
+                        <input type="text" id="label-text" placeholder="Enter label text">
+                    </div>
+                    <button class="btn btn-primary" onclick="addLabel()">Add Label</button>
+                </div>
+
+                <div id="edit-selection" class="panel-section" style="display: none;">
+                    <h3>Edit selection</h3>
+                    <div id="edit-terrain-room">
+                        <div class="field">
+                            <label>Name</label>
+                            <input type="text" id="edit-name">
+                        </div>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Width (m)</label>
+                                <input type="number" id="edit-width" step="0.01">
+                            </div>
+                            <div class="field">
+                                <label>Height (m)</label>
+                                <input type="number" id="edit-height" step="0.01">
+                            </div>
+                        </div>
+                        <div class="field" id="edit-color-wrap" style="display: none;">
+                            <label>Color</label>
+                            <input type="color" id="edit-space-color" style="width: 100%; height: 36px; padding: 2px; cursor: pointer;">
+                        </div>
+                        <div id="edit-counts-wrap" style="display: none;"><label><input type="checkbox" id="edit-counts-in-total"> Include in built area</label></div>
+                        <button type="button" class="btn btn-primary" id="btn-apply-rect">Apply</button>
+                    </div>
+                    <div id="edit-label" style="display: none;">
+                        <div class="field">
+                            <label>Text</label>
+                            <input type="text" id="edit-label-text">
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btn-apply-label">Apply</button>
+                    </div>
+                </div>
+
+                <div id="project-summary">
+                    <h3>Project Summary</h3>
+                    <p><strong>Built area:</strong> <span id="summary-total">0</span> m²</p>
+                    <ul id="summary-list"></ul>
+                    <p style="margin-top: 14px;"><strong>Not in built area:</strong></p>
+                    <ul id="summary-list-non-built"></ul>
+                </div>
+
+                <div class="panel-section">
+                    <h3>Actions</h3>
+                    <div class="actions-row">
+                        <button class="btn btn-secondary" onclick="undo()">Undo</button>
+                        <button class="btn btn-secondary" onclick="copySpaces()">Copy space(s)</button>
+                        <button class="btn btn-secondary" onclick="pasteSpaces()">Paste space(s)</button>
+                        <button class="btn btn-secondary" onclick="exportProject()">Export Project</button>
+                        <button class="btn btn-secondary" onclick="importProject()">Import Project</button>
+                        <button class="btn btn-secondary" onclick="exportScreenshot()">Export Screenshot</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="canvas-wrapper">
+            <div id="canvas-container">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        <button type="button" class="collapse-tab" id="expand-panel" title="Expand panel">&#9654;</button>
+    </div>
+
+    <script>
+        const canvasEl = document.getElementById('canvas');
+        const canvasContainer = document.getElementById('canvas-container');
+        const canvas = new fabric.Canvas('canvas');
+        const scale = 20; // pixels per meter, adjust as needed for visibility
+        let history = []; // For undo
+        let terrain = null;
+        let objectCounter = 1;
+        let clipboardSpaces = []; // { left, top, width, height, fill, opacity, countsInTotal, id }
+        let pasteOffsetCounter = 0;
+
+        // Get effective dimensions (Fabric applies resize via scaleX/scaleY, not width/height)
+        function getScaledRectDimensions(obj) {
+            var w = obj.width * (obj.scaleX != null ? obj.scaleX : 1);
+            var h = obj.height * (obj.scaleY != null ? obj.scaleY : 1);
+            if (typeof obj.getScaledWidth === 'function') w = obj.getScaledWidth();
+            if (typeof obj.getScaledHeight === 'function') h = obj.getScaledHeight();
+            return { width: w, height: h };
+        }
+
+        // --- Canvas resize & zoom to fit ---
+        function getObjectsBounds(objects) {
+            if (!objects || objects.length === 0) return null;
+            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            objects.forEach(function(obj) {
+                var rect = obj.getBoundingRect();
+                minX = Math.min(minX, rect.left);
+                minY = Math.min(minY, rect.top);
+                maxX = Math.max(maxX, rect.left + rect.width);
+                maxY = Math.max(maxY, rect.top + rect.height);
+            });
+            return { left: minX, top: minY, width: maxX - minX, height: maxY - minY };
+        }
+
+        function zoomToFit() {
+            var w = canvas.width;
+            var h = canvas.height;
+            var objects = canvas.getObjects();
+            var padding = 40;
+            if (!objects || objects.length === 0) {
+                canvas.setZoom(1);
+                canvas.viewportTransform = [1, 0, 0, 1, 0, 0];
+                canvas.requestRenderAll();
+                return;
+            }
+            var bounds = getObjectsBounds(objects);
+            var fitW = w - 2 * padding;
+            var fitH = h - 2 * padding;
+            var zoomX = fitW / bounds.width;
+            var zoomY = fitH / bounds.height;
+            var zoom = Math.min(zoomX, zoomY, 2);
+            zoom = Math.max(0.05, zoom);
+            var centerX = bounds.left + bounds.width / 2;
+            var centerY = bounds.top + bounds.height / 2;
+            var vpt = canvas.viewportTransform.slice();
+            vpt[0] = zoom; vpt[1] = 0; vpt[2] = 0; vpt[3] = zoom;
+            vpt[4] = w / 2 - centerX * zoom;
+            vpt[5] = h / 2 - centerY * zoom;
+            canvas.setViewportTransform(vpt);
+            canvas.setZoom(zoom);
+            canvas.requestRenderAll();
+        }
+
+        function resizeCanvas() {
+            var w = canvasContainer.clientWidth;
+            var h = canvasContainer.clientHeight;
+            if (w <= 0 || h <= 0) return;
+            canvas.setDimensions({ width: w, height: h });
+            zoomToFit();
+        }
+
+        var resizeObserver = new ResizeObserver(function() {
+            resizeCanvas();
+        });
+        resizeObserver.observe(canvasContainer);
+        resizeCanvas(); // initial size
+
+        // Mouse wheel zoom (zoom toward pointer)
+        canvas.on('mouse:wheel', function(opt) {
+            opt.e.preventDefault();
+            opt.e.stopPropagation();
+            var delta = opt.e.deltaY;
+            var zoom = canvas.getZoom();
+            var zoomFactor = 1 - delta / 400;
+            var newZoom = zoom * zoomFactor;
+            newZoom = Math.max(0.05, Math.min(10, newZoom));
+            var point = { x: opt.e.offsetX, y: opt.e.offsetY };
+            if (canvas.zoomToPoint) {
+                canvas.zoomToPoint(point, newZoom);
+            } else {
+                var vpt = canvas.viewportTransform.slice();
+                var zoomBefore = vpt[0];
+                vpt[0] = newZoom; vpt[3] = newZoom;
+                vpt[4] = point.x - (point.x - vpt[4]) / zoomBefore * newZoom;
+                vpt[5] = point.y - (point.y - vpt[5]) / zoomBefore * newZoom;
+                canvas.setViewportTransform(vpt);
+                canvas.setZoom(newZoom);
+            }
+            canvas.requestRenderAll();
+        });
+
+        // Pan by dragging on empty space
+        var isPanning = false;
+        var lastPanX = 0, lastPanY = 0;
+        canvas.on('mouse:down', function(opt) {
+            if (!opt.target) {
+                isPanning = true;
+                lastPanX = opt.e.clientX;
+                lastPanY = opt.e.clientY;
+                canvas.selection = false;
+            }
+        });
+        canvas.on('mouse:move', function(opt) {
+            if (isPanning) {
+                var dx = opt.e.clientX - lastPanX;
+                var dy = opt.e.clientY - lastPanY;
+                lastPanX = opt.e.clientX;
+                lastPanY = opt.e.clientY;
+                canvas.relativePan({ x: dx, y: dy });
+                opt.e.preventDefault();
+            }
+        });
+        canvas.on('mouse:up', function(opt) {
+            if (isPanning) {
+                isPanning = false;
+                canvas.selection = true;
+                opt.e.preventDefault();
+            }
+        });
+
+        // Save state for undo
+        function saveState() {
+            history.push(JSON.stringify(canvas.toJSON(['id', 'name', 'isTerrain', 'countsInTotal'])));
+        }
+
+        // Undo
+        function undo() {
+            if (history.length > 0) {
+                const previousState = history.pop();
+                canvas.loadFromJSON(previousState, function() {
+                    canvas.renderAll();
+                    terrain = null;
+                    canvas.forEachObject(function(obj) {
+                        if (obj.isTerrain) terrain = obj;
+                        if (obj.type === 'rect') {
+                            if (obj.countsInTotal === undefined) obj.countsInTotal = true;
+                            setSpaceStroke(obj);
+                            updateLabels(obj);
+                        }
+                    });
+                    updateProjectSummary();
+                });
+            }
+        }
+
+        // Create terrain
+        function createTerrain() {
+            if (terrain) {
+                alert('Terrain already exists. Remove it first if needed.');
+                return;
+            }
+            const width = parseFloat(document.getElementById('terrain-width').value) * scale;
+            const height = parseFloat(document.getElementById('terrain-height').value) * scale;
+            terrain = new fabric.Rect({
+                left: 10,
+                top: 10,
+                width: width,
+                height: height,
+                fill: 'transparent',
+                stroke: 'black',
+                strokeWidth: 2,
+                selectable: true,
+                lockMovementX: true,
+                lockMovementY: true,
+                lockScalingX: true,
+                lockScalingY: true,
+                isTerrain: true,
+                id: 'Terrain'
+            });
+            canvas.add(terrain);
+            addNameLabel(terrain, 'Terrain');
+            addDimensions(terrain);
+            addLegend(terrain);
+            saveState();
+            zoomToFit();
+        }
+
+        // Stroke color: blue for built area, grey for non-built
+        function setSpaceStroke(obj) {
+            if (obj.type !== 'rect' || obj.isTerrain) return;
+            obj.set('stroke', obj.countsInTotal !== false ? '#2563eb' : '#9ca3af');
+            canvas.requestRenderAll();
+        }
+
+        // Add space (smaller rectangle)
+        function addSpace() {
+            if (!terrain) {
+                alert('Create terrain first.');
+                return;
+            }
+            var name = document.getElementById('space-name').value || 'Space ' + objectCounter++;
+            var width = parseFloat(document.getElementById('space-width').value) * scale;
+            var height = parseFloat(document.getElementById('space-height').value) * scale;
+            var countsInTotal = document.getElementById('space-counts-in-total').checked;
+            var fillColor = document.getElementById('space-color').value || '#e5e7eb';
+            var space = new fabric.Rect({
+                left: 50,
+                top: 50,
+                width: width,
+                height: height,
+                fill: fillColor,
+                opacity: 0.5,
+                stroke: countsInTotal !== false ? '#2563eb' : '#9ca3af',
+                strokeWidth: 1,
+                id: name,
+                countsInTotal: countsInTotal
+            });
+            canvas.add(space);
+            addNameLabel(space, name);
+            addDimensions(space);
+            addLegend(space);
+            saveState();
+            updateProjectSummary();
+        }
+
+        // Copy / paste spaces
+        function getSelectedSpaces() {
+            var active = canvas.getActiveObject();
+            if (!active) return [];
+            var objects = active.type === 'group' ? active.getObjects() : [active];
+            return objects.filter(function(obj) { return obj.type === 'rect' && !obj.isTerrain; });
+        }
+
+        function copySpaces() {
+            var spaces = getSelectedSpaces();
+            if (spaces.length === 0) return;
+            pasteOffsetCounter = 0;
+            var d;
+            clipboardSpaces = spaces.map(function(obj) {
+                d = getScaledRectDimensions(obj);
+                return {
+                    left: obj.left,
+                    top: obj.top,
+                    width: d.width,
+                    height: d.height,
+                    fill: obj.fill || '#e5e7eb',
+                    opacity: obj.opacity != null ? obj.opacity : 0.5,
+                    countsInTotal: obj.countsInTotal !== false,
+                    id: obj.id || 'Space'
+                };
+            });
+        }
+
+        function pasteSpaces() {
+            if (clipboardSpaces.length === 0 || !terrain) return;
+            pasteOffsetCounter += 1;
+            var offset = 40 * pasteOffsetCounter;
+            clipboardSpaces.forEach(function(data) {
+                var baseId = (data.id || '').replace(/\s*\(copy(?:\s*\d*)?\)\s*$/, '');
+                var name = baseId ? baseId + ' (copy)' : 'Space ' + (++objectCounter);
+                var space = new fabric.Rect({
+                    left: data.left + offset,
+                    top: data.top + offset,
+                    width: data.width,
+                    height: data.height,
+                    fill: data.fill,
+                    opacity: data.opacity,
+                    stroke: data.countsInTotal ? '#2563eb' : '#9ca3af',
+                    strokeWidth: 1,
+                    id: name,
+                    countsInTotal: data.countsInTotal
+                });
+                canvas.add(space);
+                addNameLabel(space, name);
+                addDimensions(space);
+                addLegend(space);
+            });
+            saveState();
+            updateProjectSummary();
+            canvas.requestRenderAll();
+        }
+
+        // Add text label anywhere
+        function addLabel() {
+            const text = document.getElementById('label-text').value;
+            if (!text) return;
+            const label = new fabric.Textbox(text, {
+                left: 100,
+                top: 100,
+                fontSize: 16,
+                editable: true
+            });
+            canvas.add(label);
+            saveState();
+        }
+
+        // Add name/ID to top-left
+        function addNameLabel(obj, name) {
+            const label = new fabric.Text(name, {
+                left: obj.left + 5,
+                top: obj.top + 5,
+                fontSize: 12,
+                selectable: false,
+                evented: false
+            });
+            obj.nameLabel = label;
+            canvas.add(label);
+        }
+
+        // Add dimensions to sides
+        function addDimensions(obj) {
+            var d = getScaledRectDimensions(obj);
+            var topDim = new fabric.Text('', {
+                left: obj.left + d.width / 2,
+                top: obj.top - 15,
+                fontSize: 10,
+                originX: 'center',
+                selectable: false,
+                evented: false
+            });
+            obj.topDim = topDim;
+            canvas.add(topDim);
+
+            var leftDim = new fabric.Text('', {
+                left: obj.left - 15,
+                top: obj.top + d.height / 2,
+                fontSize: 10,
+                originX: 'center',
+                originY: 'center',
+                angle: -90,
+                selectable: false,
+                evented: false
+            });
+            obj.leftDim = leftDim;
+            canvas.add(leftDim);
+
+            updateDimensions(obj);
+        }
+
+        // Update dimensions text (uses scaled dimensions)
+        function updateDimensions(obj) {
+            var d = getScaledRectDimensions(obj);
+            var widthM = (d.width / scale).toFixed(2);
+            var heightM = (d.height / scale).toFixed(2);
+            obj.topDim.set({ text: widthM + ' m' });
+            obj.leftDim.set({ text: heightM + ' m' });
+            canvas.renderAll();
+        }
+
+        // Add legend (dimensions and area) to bottom-right
+        function addLegend(obj) {
+            var d = getScaledRectDimensions(obj);
+            var legend = new fabric.Text('', {
+                left: obj.left + d.width - 5,
+                top: obj.top + d.height - 5,
+                fontSize: 6,
+                originX: 'right',
+                originY: 'bottom',
+                selectable: false,
+                evented: false
+            });
+            obj.legend = legend;
+            canvas.add(legend);
+            updateLegend(obj);
+        }
+
+        // Update legend (uses scaled dimensions)
+        function updateLegend(obj) {
+            var d = getScaledRectDimensions(obj);
+            var widthM = (d.width / scale).toFixed(2);
+            var heightM = (d.height / scale).toFixed(2);
+            var areaM2 = (parseFloat(widthM) * parseFloat(heightM)).toFixed(2);
+            obj.legend.set({ text: widthM + 'x' + heightM + ' m\n' + areaM2 + ' m²' });
+            canvas.renderAll();
+        }
+
+        // Update positions of labels, dimensions, legends (uses scaled dimensions)
+        function updateLabels(obj) {
+            var d = getScaledRectDimensions(obj);
+            if (obj.nameLabel) {
+                obj.nameLabel.set({
+                    left: obj.left + 5,
+                    top: obj.top + 5
+                });
+            }
+            if (obj.topDim) {
+                obj.topDim.set({
+                    left: obj.left + d.width / 2,
+                    top: obj.top - 15
+                });
+                updateDimensions(obj);
+            }
+            if (obj.leftDim) {
+                obj.leftDim.set({
+                    left: obj.left - 15,
+                    top: obj.top + d.height / 2
+                });
+                updateDimensions(obj);
+            }
+            if (obj.legend) {
+                obj.legend.set({
+                    left: obj.left + d.width - 5,
+                    top: obj.top + d.height - 5
+                });
+                updateLegend(obj);
+            }
+        }
+
+        // Event listener for object modification (bake scale into width/height so stored state is correct)
+        canvas.on('object:modified', function(e) {
+            var obj = e.target;
+            if (obj.type === 'rect') {
+                var d = getScaledRectDimensions(obj);
+                if ((obj.scaleX != null && obj.scaleX !== 1) || (obj.scaleY != null && obj.scaleY !== 1)) {
+                    obj.set({ width: d.width, height: d.height, scaleX: 1, scaleY: 1 });
+                }
+                updateLabels(obj);
+                saveState();
+                if (!obj.isTerrain) updateProjectSummary();
+                if (canvas.getActiveObject() === obj) updateEditPanel();
+            }
+        });
+
+        canvas.on('object:removed', function() {
+            updateProjectSummary();
+        });
+
+        canvas.on('object:moving', function(e) {
+            const obj = e.target;
+            updateLabels(obj);
+        });
+
+        canvas.on('object:scaling', function(e) {
+            const obj = e.target;
+            updateLabels(obj);
+            if (obj.type === 'rect' && !obj.isTerrain) updateProjectSummary();
+        });
+
+        // Edit selection: show panel when terrain, space, or label is selected
+        var editSection = document.getElementById('edit-selection');
+        var editTerrainRoom = document.getElementById('edit-terrain-room');
+        var editLabelDiv = document.getElementById('edit-label');
+        var editName = document.getElementById('edit-name');
+        var editWidth = document.getElementById('edit-width');
+        var editHeight = document.getElementById('edit-height');
+        var editLabelText = document.getElementById('edit-label-text');
+        var editCountsWrap = document.getElementById('edit-counts-wrap');
+        var editCountsInTotal = document.getElementById('edit-counts-in-total');
+        var editColorWrap = document.getElementById('edit-color-wrap');
+        var editSpaceColor = document.getElementById('edit-space-color');
+
+        function fillToHex(fill) {
+            if (!fill) return '#e5e7eb';
+            if (fill.indexOf('#') === 0) return fill;
+            if (fill.indexOf('rgb') === 0) {
+                var m = fill.match(/\d+/g);
+                if (m && m.length >= 3) {
+                    var r = parseInt(m[0], 10); var g = parseInt(m[1], 10); var b = parseInt(m[2], 10);
+                    return '#' + [r, g, b].map(function(x) { var h = x.toString(16); return h.length === 1 ? '0' + h : h; }).join('');
+                }
+            }
+            return '#e5e7eb';
+        }
+
+        function updateEditPanel() {
+            var active = canvas.getActiveObject();
+            if (!active) {
+                editSection.style.display = 'none';
+                return;
+            }
+            if (active.type === 'rect') {
+                editSection.style.display = 'block';
+                editTerrainRoom.style.display = 'block';
+                editLabelDiv.style.display = 'none';
+                editName.value = active.id || (active.isTerrain ? 'Terrain' : '');
+                editName.disabled = !!active.isTerrain;
+                var d = getScaledRectDimensions(active);
+                editWidth.value = (d.width / scale).toFixed(2);
+                editHeight.value = (d.height / scale).toFixed(2);
+                if (active.isTerrain) {
+                    editCountsWrap.style.display = 'none';
+                    editColorWrap.style.display = 'none';
+                } else {
+                    editCountsWrap.style.display = 'block';
+                    editCountsInTotal.checked = active.countsInTotal !== false;
+                    editColorWrap.style.display = 'block';
+                    editSpaceColor.value = fillToHex(active.fill);
+                }
+            } else if (active.type === 'textbox') {
+                editSection.style.display = 'block';
+                editTerrainRoom.style.display = 'none';
+                editLabelDiv.style.display = 'block';
+                editLabelText.value = active.text || '';
+            } else {
+                editSection.style.display = 'none';
+            }
+        }
+
+        function applyRectEdit() {
+            var active = canvas.getActiveObject();
+            if (!active || active.type !== 'rect') return;
+            var name = editName.value.trim();
+            if (!active.isTerrain && name) active.id = name;
+            var w = parseFloat(editWidth.value);
+            var h = parseFloat(editHeight.value);
+            if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0) {
+                var opts = { width: w * scale, height: h * scale, scaleX: 1, scaleY: 1 };
+                if (!active.isTerrain) {
+                    opts.countsInTotal = editCountsInTotal.checked;
+                    opts.fill = editSpaceColor.value || '#e5e7eb';
+                }
+                active.set(opts);
+                if (!active.isTerrain) setSpaceStroke(active);
+                if (active.nameLabel) active.nameLabel.set({ text: active.isTerrain ? 'Terrain' : (name || active.id) });
+                updateLabels(active);
+                canvas.requestRenderAll();
+                saveState();
+                updateProjectSummary();
+            }
+        }
+
+        function applyLabelEdit() {
+            var active = canvas.getActiveObject();
+            if (!active || active.type !== 'textbox') return;
+            active.set({ text: editLabelText.value });
+            canvas.requestRenderAll();
+            saveState();
+        }
+
+        canvas.on('selection:created', updateEditPanel);
+        canvas.on('selection:updated', updateEditPanel);
+        canvas.on('selection:cleared', function() {
+            editSection.style.display = 'none';
+        });
+
+        document.getElementById('btn-apply-rect').addEventListener('click', applyRectEdit);
+        document.getElementById('btn-apply-label').addEventListener('click', applyLabelEdit);
+
+        // Function to update all legends (for undo/load)
+        function updateAllLegends() {
+            canvas.forEachObject(function(obj) {
+                if (obj.type === 'rect') {
+                    updateLabels(obj);
+                }
+            });
+        }
+
+        // Project Summary: built area total + two lists (built and non-built)
+        function updateProjectSummary() {
+            var total = 0;
+            var items = [];
+            var itemsNonBuilt = [];
+            canvas.forEachObject(function(obj) {
+                if (obj.type !== 'rect' || obj.isTerrain) return;
+                var d = getScaledRectDimensions(obj);
+                var wM = d.width / scale;
+                var hM = d.height / scale;
+                var area = wM * hM;
+                var entry = { name: obj.id || 'Space', width: wM, height: hM, area: area };
+                if (obj.countsInTotal !== false) {
+                    total += area;
+                    items.push(entry);
+                } else {
+                    itemsNonBuilt.push(entry);
+                }
+            });
+            document.getElementById('summary-total').textContent = total.toFixed(2);
+            var listEl = document.getElementById('summary-list');
+            listEl.innerHTML = '';
+            items.forEach(function(it) {
+                var li = document.createElement('li');
+                li.textContent = it.name + ': ' + it.width.toFixed(2) + ' × ' + it.height.toFixed(2) + ' m = ' + it.area.toFixed(2) + ' m²';
+                listEl.appendChild(li);
+            });
+            var listNonBuiltEl = document.getElementById('summary-list-non-built');
+            listNonBuiltEl.innerHTML = '';
+            itemsNonBuilt.forEach(function(it) {
+                var li = document.createElement('li');
+                li.textContent = it.name + ': ' + it.width.toFixed(2) + ' × ' + it.height.toFixed(2) + ' m = ' + it.area.toFixed(2) + ' m²';
+                listNonBuiltEl.appendChild(li);
+            });
+        }
+
+        // Export project to JSON file
+        function exportProject() {
+            const json = JSON.stringify(canvas.toJSON(['id', 'name', 'isTerrain', 'countsInTotal']));
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'project.json';
+            a.click();
+        }
+
+        // Import project from JSON
+        function importProject() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    canvas.loadFromJSON(event.target.result, function() {
+                        canvas.renderAll();
+                        canvas.forEachObject(function(obj) {
+                            if (obj.isTerrain) terrain = obj;
+                            if (obj.type === 'rect') {
+                                if (obj.countsInTotal === undefined) obj.countsInTotal = true;
+                                setSpaceStroke(obj);
+                                updateLabels(obj);
+                            }
+                        });
+                        saveState();
+                        zoomToFit();
+                        updateProjectSummary();
+                    });
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Export screenshot to PNG
+        function exportScreenshot() {
+            const dataURL = canvas.toDataURL({
+                format: 'png',
+                multiplier: 2 // Higher resolution
+            });
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'project.png';
+            a.click();
+        }
+
+        // Initial save and summary
+        saveState();
+        updateProjectSummary();
+
+        // Collapsible left panel
+        const leftPanel = document.getElementById('left-panel');
+        const toggleBtn = document.getElementById('toggle-panel');
+        const expandTab = document.getElementById('expand-panel');
+
+        function setPanelCollapsed(collapsed) {
+            leftPanel.classList.toggle('collapsed', collapsed);
+            toggleBtn.textContent = collapsed ? '' : '\u9664 Collapse';
+            toggleBtn.title = collapsed ? '' : 'Collapse panel';
+        }
+
+        toggleBtn.addEventListener('click', function() {
+            setPanelCollapsed(true);
+        });
+        expandTab.addEventListener('click', function() {
+            setPanelCollapsed(false);
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'c') {
+                    copySpaces();
+                } else if (e.key === 'v') {
+                    e.preventDefault();
+                    pasteSpaces();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
